@@ -1,30 +1,30 @@
-from django.http import HttpRequest, JsonResponse
-from django.views import View
-from django.forms.models import model_to_dict
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
+from .serializer import ProductSerializer
 from .models import Product
-import json
+from rest_framework.permissions import IsAuthenticated
 
 
-class ProductListView(View):
-    def get(self, request: HttpRequest) -> JsonResponse:
+
+class ProductList(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
         products = Product.objects.all()
 
-        data = [model_to_dict(product) for product in products]
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return JsonResponse(data, safe=False)
+    def post(self, request: Request) -> Response:
+        serializer = ProductSerializer(data=request.data)
 
+        if serializer.is_valid():
+            serializer.save()
 
-    def post(self, reqeust: HttpRequest) -> JsonResponse:
-        data = json.loads(reqeust.body.decode('utf-8'))
-
-        product = Product.objects.create(
-            name=data['name'],  
-            description=data['description'],
-            price=data['price']
-        )
-
-        product.save()
-
-        return JsonResponse(model_to_dict(product), status=201)
-
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    
     
